@@ -1,0 +1,76 @@
+type SHOWABLE =
+{
+  type t;
+  show : t -> Text.text;
+};
+
+Text =
+{
+  include Text;
+  show = id;
+};
+
+Bool =
+{
+  include Bool;
+  show b = if b then "true" else "false";
+};
+
+Int =
+{
+  include Int;
+  show = primitive "Int.show";
+};
+
+Opt =
+{
+  include Opt;
+  isSome xo = caseopt xo (fun () => false) (fun x => true);
+  isNone xo = not (isSome xo);
+  map f xo = caseopt xo (fun () => none) (fun x => some (f x));
+  show (M:SHOWABLE) xo = caseopt xo (fun () => "none") (fun x => "some " ++ M.show x);
+  print (M:SHOWABLE) = Text.print << (show M);
+};
+
+;; type MONOID =
+;; {
+;;   type t;
+;;   (*) : (t,  t) -> t;
+;;   e : t;
+;; };
+;;
+;; TextMonoid :> MONOID =
+;; {
+;;   type t = Text.t;
+;;   (*) = (++);
+;;   e = "";
+;; };
+;;
+;; OptMonoid (M:MONOID) :> MONOID with (t = ) =
+;; {
+;;   type x = M.t;
+;;   type t = Opt.opt x;
+;;   op = M.*;
+;;   (*) (a, b) =
+;;       caseopt a
+;;       (fun () => none)
+;;       (fun a  =>
+;;         caseopt b
+;;         (fun () => none)
+;;         (fun b  => some (op (a, b))));
+;;   e = none;
+;; };
+
+type SEMI_GROUP (t : type) =
+{
+  op : t -> t -> t;
+};
+
+app (t : type) (M : SEMI_GROUP t) a b = M.op a b;
+
+;; type MONOID (m : type -> type) (t : type) =
+;; {
+;;   e = t;
+;;   op 'a : m a -> m a -> m a;
+;;   cat 'a : m m a -> m a
+;; }
