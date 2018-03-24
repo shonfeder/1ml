@@ -27,13 +27,23 @@ and value =
   | FunV of env * var * exp
   | RecV of value option ref
 
+let rec string_of_exp = function
+  | VarE var       -> var
+  | PrimE prim     -> Prim.string_of_const prim
+  | IfE(c, t, f)   -> Printf.sprintf "(if %s then %s else %s)" (string_of_exp c) (string_of_exp t) (string_of_exp f)
+  | LamE(v, e)     -> Printf.sprintf "\%s.(%s)" v (string_of_exp e)
+  | AppE(e, e')    -> Printf.sprintf "(%s %s)" (string_of_exp e) (string_of_exp e')
+  | TupE es        -> Printf.sprintf "(%s)" (String.concat " * " @@ List.map string_of_exp es)
+  | DotE(e, i)     -> Printf.sprintf "(DotE?? %s %s)" (string_of_exp e) (string_of_int i)
+  | RecE(v, e)     -> Printf.sprintf "rec %s %s" v (string_of_exp e)
+  | LetE(e, v, e') -> Printf.sprintf "let %s = %s in %s" (string_of_exp e) v (string_of_exp e')
 
 (* String conversion *)
 
 let rec string_of_value = function
   | PrimV(c) -> Prim.string_of_const c
   | TupV(vs) -> "[" ^ String.concat ", " (List.map string_of_value vs) ^ "]"
-  | FunV(env, x, e) -> "(\\" ^ x ^ "...)"
+  | FunV(env, x, e) -> Printf.sprintf "(\\ %s %s)" x (string_of_exp e)
   | RecV(r) ->
     match !r with
     | Some v -> string_of_value v
