@@ -97,6 +97,9 @@ let funs =
     {name = "Int.>=";
       typ = [IntT; IntT], [BoolT];
       fn = fun [x1; x2] -> [BoolV(x1 >= x2)]};
+    {name = "Int.show";
+      typ = [IntT], [TextT];
+      fn = fun [IntV i] -> [TextV(string_of_int i)]};
     {name = "Int.print";
       typ = [IntT], [];
       fn = fun [IntV i] -> print_int i; flush_all (); []};
