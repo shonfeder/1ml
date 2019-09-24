@@ -1,6 +1,7 @@
 #
 # (c) 2014 Andreas Rossberg
 #
+# TODO Replace much of this with dune
 
 NAME = 1ml
 MODULES = \
@@ -36,6 +37,10 @@ Makefile.depend: $(MLS) $(MLIS) Makefile
 	ocamldep $^ >$@
 
 -include Makefile.depend
+
+# TODO replace with proper top-level
+top:
+	rlwrap ./1ml prelude.1ml interlude.1ml -
 
 zip: $(MLS) $(MLIS) $(MLYS) $(MLLS) Makefile $(IMLS) $(TXTS)
 	mkdir tmp tmp/$(NAME)
