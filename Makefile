@@ -40,7 +40,7 @@ Makefile.depend: $(MLS) $(MLIS) Makefile
 
 # TODO replace with proper top-level
 top:
-	rlwrap ./1ml prelude.1ml interlude.1ml -
+	rlwrap ./1ml prelude.1ml interlude.1ml stack.1ml -
 
 zip: $(MLS) $(MLIS) $(MLYS) $(MLLS) Makefile $(IMLS) $(TXTS)
 	mkdir tmp tmp/$(NAME)

@@ -1,0 +1,43 @@
+type STACK = {
+  type t a;
+  new 'a : t a;
+  push 'a : t a -> a -> t a;
+  ;; Should this actualy return a record?
+  ;; This should be typeable, but there seems to be a bug in the type checker:
+  ;; pop 'a : t a -> opt ((t a, a))
+
+  isEmpty 'a : t a -> bool;
+  size 'a : t a -> int;
+};
+
+Stack (; :> STACK ;) = {
+  type t a = {size: int; content: list a};
+
+  new 'a = {size = 0; content = List.nil};
+
+  push 'a (s : t a) x =
+    let size' = s.size + 1 in
+    let content' = s.content in
+    {size = size' + 1; content = List.cons x content'};
+
+  peek 'a (s : t a) =
+    let content = s.content in
+    List.head content;
+
+  pop 'a (s : t a) =
+    let content = s.content in
+    caseopt (List.tail content)
+      (fun () => Opt.none)
+      (fun content' => caseopt (List.head content)
+        (fun () => Opt.none)
+        (fun x =>
+          let size' = s.size - 1 in
+          let s' = {size = size'; content = content'} in
+          Opt.some (s', x)));
+
+  isEmpty 'a (s : t a) =
+    let content = s.content in
+    List.isNil content;
+
+  size 'a (s : t a) = s.size
+};
