@@ -1,6 +1,8 @@
 #
 # (c) 2014 Andreas Rossberg
 #
+# Modified by Shon Feder in 2019
+#
 # TODO Replace much of this with dune
 
 NAME = 1ml

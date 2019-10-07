@@ -1,3 +1,5 @@
+;; First authored by Shon Feder in 2019
+
 type STACK = {
   type t a;
   new 'a : t a;
