@@ -70,8 +70,8 @@ let value_of_consts = function
 let rec unroll = function
   | RecV(r) ->
     (match !r with
-    | Some v -> unroll v
-    | None -> raise (Error "RecE: _")
+     | Some v -> unroll v
+     | None -> raise (Error "RecE: _")
     )
   | v -> v
 
@@ -83,21 +83,21 @@ and eval' env = function
   | PrimE(c) -> PrimV(c)
   | IfE(e1, e2, e3) ->
     (match eval env e1 with
-    | PrimV(Prim.BoolV(b)) -> eval env (if b then e2 else e3)
-    | v -> raise (Error ("IfE: " ^ string_of_value v))
+     | PrimV(Prim.BoolV(b)) -> eval env (if b then e2 else e3)
+     | v -> raise (Error ("IfE: " ^ string_of_value v))
     )
   | LamE(x, e) -> FunV(env, x, e)
   | AppE(e1, e2) ->
     (match eval env e1, eval env e2 with
-    | FunV(env', x, e), v2 -> eval (Env.add x v2 env') e
-    | PrimV(Prim.FunV f), v2 -> value_of_consts (f.Prim.fn (consts_of_value v2))
-    | v1, _ -> raise (Error ("AppE1: " ^ string_of_value v1))
+     | FunV(env', x, e), v2 -> eval (Env.add x v2 env') e
+     | PrimV(Prim.FunV f), v2 -> value_of_consts (f.Prim.fn (consts_of_value v2))
+     | v1, _ -> raise (Error ("AppE1: " ^ string_of_value v1))
     )
   | TupE(es) -> TupV(List.map (eval env) es)
   | DotE(e, i) ->
     (match eval env e with
-    | TupV(vs) -> List.nth vs i
-    | v -> raise (Error ("DotE: " ^ string_of_value v))
+     | TupV(vs) -> List.nth vs i
+     | v -> raise (Error ("DotE: " ^ string_of_value v))
     )
   | RecE(x, e) ->
     let r = ref None in
