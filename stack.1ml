@@ -4,15 +4,17 @@ type STACK = {
   type t a;
   new 'a : t a;
   push 'a : t a -> a -> t a;
-  ;; Should this actualy return a record?
-  ;; This should be typeable, but there seems to be a bug in the type checker:
-  ;; pop 'a : t a -> opt ((t a, a))
+
+  ;; Only needed to work around bug in type checker that's preventing use of the
+  ;; clearer and more concise type declaration: t a -> opt (t a, a)
+  type pair a = (t a, a);
+  pop 'a : t a -> opt (pair a);
 
   isEmpty 'a : t a -> bool;
   size 'a : t a -> int;
 };
 
-Stack (; :> STACK ;) = {
+Stack :> STACK = {
   type t a = {size: int; content: list a};
 
   new 'a = {size = 0; content = List.nil};
@@ -25,6 +27,9 @@ Stack (; :> STACK ;) = {
   peek 'a (s : t a) =
     let content = s.content in
     List.head content;
+
+  ;; TODO rm when type checking bug is fixed
+  type pair a = (t a, a);
 
   pop 'a (s : t a) =
     let content = s.content in
