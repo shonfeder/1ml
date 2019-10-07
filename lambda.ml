@@ -35,7 +35,7 @@ let rec string_of_exp = function
   | VarE var       -> var
   | PrimE prim     -> Prim.string_of_const prim
   | IfE(c, t, f)   -> Printf.sprintf "(if %s then %s else %s)" (string_of_exp c) (string_of_exp t) (string_of_exp f)
-  | LamE(v, e)     -> Printf.sprintf "\%s.(%s)" v (string_of_exp e)
+  | LamE(v, e)     -> Printf.sprintf "\\%s.(%s)" v (string_of_exp e)
   | AppE(e, e')    -> Printf.sprintf "(%s %s)" (string_of_exp e) (string_of_exp e')
   | TupE es        -> Printf.sprintf "(%s)" (String.concat " * " @@ List.map string_of_exp es)
   | DotE(e, i)     -> Printf.sprintf "(DotE?? %s %s)" (string_of_exp e) (string_of_int i)
