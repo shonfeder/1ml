@@ -1,0 +1,205 @@
+#+TITLE: Project plans and notes
+#+AUTHOR: Shon Feder
+
+Currently used for tracking and recording progress, plans, and ideas during my
+time spent studying and hacking on 1ML as part of my Fall 2, 2019 batch at the
+recurse center.
+
+* Avenues
+To explore or build. Many of these are informed by Rossberg's notes on "Future
+Work" from the "Core and Modules United" papers.
+
+** Compiler
+- Explanation :: Write a compiler from an OCaml representation of System F-Omega to LLVM or the CAM.
+- Motive :: Improved understanding of compilers and low-level code.
+*** Resources
+- https://softwareengineering.stackexchange.com/a/165558/90076
+- dragon book
+** System F-Omega
+- Explanation :: New (or extended or refined version of Rossberg's
+  implementation) of compilation of 1ML to System F-Omega
+- Motive :: Improved understanding of type theory and compilers. Deepen
+  knowledge of core PLT concepts.
+*** Resources
+https://www.cl.cam.ac.uk/teaching/1617/L28/materials.html
+** Interpreter
+- Explanation :: A new (or extend or improved version of Rossberg's) interpreter
+- Motive :: Learn how to write interpreters. Deepen knowledge of language.
+** Implementation
+- Explanation :: Add missing features
+- Motive :: Learn how to extend language implementation. Mid-level PLT concepts.
+*** DONE Compile list of features
+*** Features
+**** TODO Pattern Matching
+Is it possible to implement pattern matching in a way that is analogous to OCaml
+4.08s =let= binding operator? Is this desirable? What would it look like and
+what would it let us do?
+**** TODO Can we do case analysis on reified types?
+**** TODO Precedence rules for operators
+(Could we just add mix-fix notation?)
+**** TODO rec syntax
+Or maybe it's nice just to have recursive functions defined as is...
+**** TODO list literal syntax
+**** TODO field punning on records
+**** TODO inference on modules types as input from signatures
+**** TODO Improved error messages
+**** TODO inference of available module fields
+#+BEGIN_SRC
+1ML> res = (Stack.pop s')
+res : opt((t(int), int));
+
+;; the following should work, because 1ML already knows the type of res
+1ML> re = Opt.map (fun x => x.1) res
+stdin:1.24-1.27: field `_1' unbound in expression
+
+;; but instead it requires explicit annotation
+1ML> re = Opt.map (fun (x: (Stack.t int, int)) => x.1) res
+re : opt(t(int));
+#+END_SRC
+*** Bugs
+**** NEXT Type-checking error: reads access of module values as if it were the module itself being supplied as a value:
+This is arising from [[file:sub.ml::105][sub.ml::105]]
+
+#+BEGIN_QUOTE 1ml
+1ML> do (Stack.push Stack.new 1);
+stdin:1.16-1.21: argument type does not match function: mismatch (structure vs abstract(unknown)) (trying {t : !a. [= a] => [= t(a)], new : !a. [= a]'=> t(a), push : !a. [= a]'=> t(a) -> a -> t(a)} < t('320))
+1ML> let s = Stack.new
+stdin:1.1-1.4: syntax error
+1ML> s = Stack.new
+s : !a [= a] '=> t(a);
+1ML> do (Stack.push s 1);
+#+END_QUOTE
+
+This only seems to occur when a function belonging to a module is passed a value
+in some module as an argument. E.g., this works:
+
+#+BEGIN_SRC 1ml
+1ML> n = {foo = 1};
+n : {foo : int; };
+1ML> x = n.foo + n.foo;
+x : int;
+#+END_SRC
+
+But if we wrap addition in another module, we get type checking errors:
+
+#+BEGIN_SRC 1ml
+1ML> m = {add a b = a + b};
+m : {add : int => int -> int; };
+1ML> x = m.add n.foo n.foo;
+stdin:1.11-1.12: argument type does not match function: mismatch (structure vs int) (trying {foo : int} < int)
+#+END_SRC
+
+unless we use temporary variables to unwrap the values first:
+
+#+BEGIN_SRC 1ml
+1ML> x = let y = n.foo in m.add y y;
+x : int;
+#+END_SRC
+
+Running a trace on a minimal example with
+
+#+BEGIN_SRC sh
+# The failing examle is in the ./stack.1ml file
+./1ml -tb -ts -td ./prelude.1ml ./interlude.1ml ./stack.1ml
+#+END_SRC
+
+gives
+
+#+BEGIN_SRC sh
+[GenE] AppE("app1$79", "M")
+[GenE] a1 = $3
+[AppE] tf = int => int -> int
+[AppE] s1 = int
+[AppE] t2 = {foo : int, bar : int}
+[sub_typ] t1 = {foo : int, bar : int}
+[sub_typ] t2 = int
+[sub_typ] ps =
+[unify_typ] t1 = {foo : int, bar : int}
+[unify_typ] t2 = int
+./stack.1ml:54.17-54.18: argument type does not match function: mismatch (structure vs int) (trying {foo : int, bar : int} < int)
+#+END_SRC
+
+This searching for the =[AppE] t2= loggin instance let's us identify the precise
+location where the subtyping check is getting called, at the branch of the
+=elab_exp= function that elaborates expressions for applications:
+
+[[file:~/Sync/oss/1ml/elab.ml::| EL.AppE(var1, var2) ->]]
+
+And particularly at this point:
+
+#+BEGIN_SRC 1ml
+Trace.debug (lazy ("[AppE] s1 = " ^ string_of_norm_extyp (ExT(aks1, t1))));
+Trace.debug (lazy ("[AppE] t2 = " ^ string_of_norm_typ t2));
+    let ts, zs3, f =
+      try sub_typ env t2 t1 (varTs aks1) with Sub e -> error var2.at
+        ("argument type does not match function: " ^ Sub.string_of_error e)
+
+#+END_SRC
+[[file:~/Sync/oss/1ml/elab.ml::Trace.debug (lazy ("[AppE] s1 = " ^ string_of_norm_extyp (ExT(aks1, t1)))); Trace.debug (lazy ("[AppE] t2 = " ^ string_of_norm_typ t2)); let ts, zs3, f = try sub_typ env t2 t1 (varTs aks1) with Sub e -> error var2.at ("argument type does not match function: " ^ Sub.string_of_error e)]]
+
+Clearly, what's happening is value access into the module is not be normalized
+correctly prior to the sub-type checking.
+**** TODO Type-checking error: does not identity type (a, b) as an instance of free type variable type t in type declarations
+#+BEGIN_SRC 1ml
+1ML> type ex = opt((int, int))
+stdin:1.15-1.25: argument type does not match function: mismatch (structure vs small type) (trying ([= int], [= int]) < [= a])
+1ML> tupe ex a = opt ((a, a))
+stdin:1.18-1.24: argument type does not match function: mismatch (structure vs small type) (trying ('316, '316) < [= a])
+1ML> tupe ex a = opt (a)
+#+END_SRC
+
+I think fixing this will just involve adding some cases to ~/Sync/oss/1ml/sub.ml:105
+
+To see the type checking trace run =./1ml -ts prelude.1ml interlude.1ml
+stack.1ml= with line 6 of =stack.1ml= commented in.
+
+We can work around the bug by creating a type alias for the pair:
+
+#+BEGIN_SRC 1ml
+type pair a = (t a, a);
+pop 'a : t a -> opt (pair a);
+#+END_SRC
+**** TODO Type-checking error: intermediate type aliases needed to get records nested in other data to type check
+#+BEGIN_SRC
+1ML> type t = opt({f:int; s:int;})
+stdin:1.20-1.21: syntax error
+1ML> type p = {f:int; s:int;}
+p : [= {f : int; s : int; }];
+1ML> type t = opt(p)
+t : [= opt({f : int; s : int; })];
+#+END_SRC
+** Tooling
+- Explanation :: Build out the start of an ecosystem
+- Motive :: Improve dev-tools ability and practice of programming my programming practice.
+*** TODO Write an emacs mode
+*** TODO Move existing interpreter to dune
+*** TODO Package existing interpreter for Opam
+*** TODO Nice top-level
+- [ ] Autocomplete
+- [ ] Show types
+- [ ] Show values
+- [ ] History
+- [ ] Utilities like cd/ls, loading modules
+** Library
+- Explanation :: Build out the start of a standard library
+- Motive :: Build understanding of core algorithms, algebraic patterns, and data
+  structures. Explore 1ML as a language in its own right.
+*** TODO Implement basic algebraic structures
+*** TODO Implement basic data structures
+**** TODO Arrays
+**** TODO Stacks
+**** TODO Sets
+**** TODO Tree based maps
+**** TODO Merge sort
+*** TODO Basic algorithms
+**** TODO Hashing
+** Documentation
+*** TODO Document language basics
+*** TODO Beginner tutorial
+*** TODO Cheat sheet
+*** TODO OCaml to 1ML guide
+
+* Notes
+Shon's notes and hairbrained ideas.
+
+- A module signature is just a context
